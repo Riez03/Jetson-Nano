@@ -1,19 +1,23 @@
+# program main
 import cv2
+import numpy as np
 from PIL import Image
 
 from util import get_limits
 
-
-yellow = [0, 255, 255]  # yellow in BGR colorspace
-cap = cv2.VideoCapture(2)
+orange = [0, 120, 240]  # orange in BGR colorspace
+cap = cv2.VideoCapture(1)
 while True:
     ret, frame = cap.read()
 
     hsvImage = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    lowerLimit, upperLimit = get_limits(color=yellow)
+    lowerLimit, upperLimit = get_limits(color=orange)
 
     mask = cv2.inRange(hsvImage, lowerLimit, upperLimit)
+
+    # Optional: Apply Gaussian Blur to reduce noise
+    # mask = cv2.GaussianBlur(mask, (5, 5), 0)
 
     mask_ = Image.fromarray(mask)
 
@@ -22,7 +26,18 @@ while True:
     if bbox is not None:
         x1, y1, x2, y2 = bbox
 
-        frame = cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 5)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for contour in contours:
+        # Skip small contours (noise)
+        if cv2.contourArea(contour) < 100:
+            continue
+
+        # Get bounding box coordinates
+        x, y, w, h = cv2.boundingRect(contour)
+
+        # Draw rectangle around the object
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     cv2.imshow('frame', frame)
 
@@ -30,6 +45,4 @@ while True:
         break
 
 cap.release()
-
 cv2.destroyAllWindows()
-
